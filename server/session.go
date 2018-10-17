@@ -12,7 +12,7 @@ var (
 	globalSessionId  uint64
 )
 
-const sessionMapNum = 32
+const sessionChunksNum = 32
 
 //连接会话
 type Session struct {
@@ -206,36 +206,36 @@ func (session *Session) invokeCloseCallbacks() {
 
 /** ******************** session 管理 ******************** **/
 
-type sessionMap struct {
+type sessionSlot struct {
 	sync.RWMutex
 	sessions map[uint64]*Session
 	disposed bool
 }
 
 type SessionManager struct {
-	sessionMaps [sessionMapNum]sessionMap
-	disposeOnce sync.Once
-	disposeWait sync.WaitGroup
+	sessionChunks [sessionChunksNum]sessionSlot
+	disposeOnce   sync.Once
+	disposeWait   sync.WaitGroup
 }
 
 func NewSessionManager() *SessionManager {
 	manager := &SessionManager{}
-	for i := 0; i < len(manager.sessionMaps); i++ {
-		manager.sessionMaps[i].sessions = make(map[uint64]*Session)
+	for i := 0; i < len(manager.sessionChunks); i++ {
+		manager.sessionChunks[i].sessions = make(map[uint64]*Session)
 	}
 	return manager
 }
 
 func (manager *SessionManager) Dispose() {
 	manager.disposeOnce.Do(func() {
-		for i := 0; i < sessionMapNum; i++ {
-			smap := &manager.sessionMaps[i]
-			smap.Lock()
-			smap.disposed = true
-			for _, session := range smap.sessions {
+		for i := 0; i < sessionChunksNum; i++ {
+			chunk := &manager.sessionChunks[i]
+			chunk.Lock()
+			chunk.disposed = true
+			for _, session := range chunk.sessions {
 				session.Close()
 			}
-			smap.Unlock()
+			chunk.Unlock()
 		}
 		manager.disposeWait.Wait()
 	})
@@ -248,35 +248,35 @@ func (manager *SessionManager) NewSession(codec Codec, sendChanSize int) *Sessio
 }
 
 func (manager *SessionManager) GetSession(sessionID uint64) *Session {
-	smap := &manager.sessionMaps[sessionID%sessionMapNum]
-	smap.RLock()
-	defer smap.RUnlock()
+	chunk := &manager.sessionChunks[sessionID%sessionChunksNum]
+	chunk.RLock()
+	defer chunk.RUnlock()
 
-	session, _ := smap.sessions[sessionID]
+	session, _ := chunk.sessions[sessionID]
 	return session
 }
 
 func (manager *SessionManager) putSession(session *Session) {
-	smap := &manager.sessionMaps[session.id%sessionMapNum]
+	chunk := &manager.sessionChunks[session.id%sessionChunksNum]
 
-	smap.Lock()
-	defer smap.Unlock()
+	chunk.Lock()
+	defer chunk.Unlock()
 
-	if smap.disposed {
+	if chunk.disposed {
 		session.Close()
 		return
 	}
 
-	smap.sessions[session.id] = session
+	chunk.sessions[session.id] = session
 	manager.disposeWait.Add(1)
 }
 
 func (manager *SessionManager) delSession(session *Session) {
-	smap := &manager.sessionMaps[session.id%sessionMapNum]
+	chunk := &manager.sessionChunks[session.id%sessionChunksNum]
 
-	smap.Lock()
-	defer smap.Unlock()
+	chunk.Lock()
+	defer chunk.Unlock()
 
-	delete(smap.sessions, session.id)
+	delete(chunk.sessions, session.id)
 	manager.disposeWait.Done()
 }

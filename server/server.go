@@ -7,24 +7,49 @@ import (
 	"time"
 )
 
+// encode/decode interface
+type Codec interface {
+	Receive() (interface{}, error)
+	Send(interface{}) error
+	Close() error
+}
+
+type Protocol interface {
+	NewCodec(rw io.ReadWriter) (Codec, error)
+}
+
+type ProtocolFunc func(rw io.ReadWriter) (Codec, error)
+
+func (pf ProtocolFunc) NewCodec(rw io.ReadWriter) (Codec, error) {
+	return pf(rw)
+}
+
+// 会话处理接口
+type Handler interface {
+	HandleSession(*Session)
+}
+
+var _ Handler = DefaultHandlerFunc(nil)
+
+//默认会话处理接口
+type DefaultHandlerFunc func(*Session)
+
+func (f DefaultHandlerFunc) HandleSession(session *Session) {
+	f(session)
+}
+
+type ClearSendChan interface {
+	ClearSendChan(<-chan interface{})
+}
+
+/** 服务器结果 **/
+
 type Server struct {
 	manager      *SessionManager
 	listener     net.Listener
 	protocol     Protocol
 	handler      Handler
 	sendChanSize int
-}
-
-type Handler interface {
-	HandleSession(*Session)
-}
-
-var _ Handler = HandlerFunc(nil)
-
-type HandlerFunc func(*Session)
-
-func (f HandlerFunc) HandleSession(session *Session) {
-	f(session)
 }
 
 func NewServer(listener net.Listener, protocol Protocol, sendChanSize int, handler Handler) *Server {
@@ -48,17 +73,18 @@ func (server *Server) Serve() error {
 		if err != nil {
 			return err
 		}
-
-		go func() {
-			codec, err := server.protocol.NewCodec(conn)
-			if err != nil {
-				conn.Close()
-				return
-			}
-			session := server.manager.NewSession(codec, server.sendChanSize)
-			server.handler.HandleSession(session)
-		}()
+		go server.handleConnection(conn)
 	}
+}
+
+func (server *Server) handleConnection(conn net.Conn) {
+	codec, err := server.protocol.NewCodec(conn)
+	if err != nil {
+		conn.Close()
+		return
+	}
+	session := server.manager.NewSession(codec, server.sendChanSize)
+	server.handler.HandleSession(session)
 }
 
 func (server *Server) GetSession(sessionID uint64) *Session {
