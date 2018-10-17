@@ -14,17 +14,17 @@ func main() {
 	jsonProtocol := protocol.Json()
 	jsonProtocol.Register(AddReq{})
 
-	server, err := srv.Listen("tcp", "0.0.0.0:0", jsonProtocol, 0, srv.DefaultHandlerFunc(serverSessionLoop))
+	server, err := srv.Listen("tcp", "0.0.0.0:0", jsonProtocol, 0, srv.DefaultHandlerFunc(sererSideHandle))
 	checkErr(err)
 	addr := server.Listener().Addr().String()
 	go server.Serve()
 
 	client, err := srv.Dial("tcp", addr, jsonProtocol, 0)
 	checkErr(err)
-	clientSessionLoop(client)
+	clientSideHandle(client)
 }
 
-func serverSessionLoop(session *srv.Session) {
+func sererSideHandle(session *srv.Session) {
 	for {
 		req, err := session.Receive()
 		checkErr(err)
@@ -33,7 +33,7 @@ func serverSessionLoop(session *srv.Session) {
 	}
 }
 
-func clientSessionLoop(session *srv.Session) {
+func clientSideHandle(session *srv.Session) {
 	for i := 0; i < 10; i++ {
 		err := session.Send(&AddReq{
 			i, i,
