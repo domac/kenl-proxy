@@ -39,7 +39,7 @@ func (b *bufioProtocol) NewCodec(rw io.ReadWriter) (cc srv.Codec, err error) {
 
 	codec.stream.c, _ = rw.(io.Closer)
 
-	codec.base, err = b.parent.NewCodec(&codec.stream)
+	codec.parent, err = b.parent.NewCodec(&codec.stream)
 	if err != nil {
 		return
 	}
@@ -69,23 +69,23 @@ func (s *bufioStream) close() error {
 }
 
 type bufioCodec struct {
-	base   srv.Codec
+	parent srv.Codec
 	stream bufioStream
 }
 
 func (c *bufioCodec) Send(msg interface{}) error {
-	if err := c.base.Send(msg); err != nil {
+	if err := c.parent.Send(msg); err != nil {
 		return err
 	}
 	return c.stream.Flush()
 }
 
 func (c *bufioCodec) Receive() (interface{}, error) {
-	return c.base.Receive()
+	return c.parent.Receive()
 }
 
 func (c *bufioCodec) Close() error {
-	err1 := c.base.Close()
+	err1 := c.parent.Close()
 	err2 := c.stream.close()
 	if err1 != nil {
 		return err1

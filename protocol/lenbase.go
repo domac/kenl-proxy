@@ -87,7 +87,7 @@ func (p *FixLenProtocol) NewCodec(rw io.ReadWriter) (cc srv.Codec, err error) {
 	}
 	codec.headBuf = codec.head[:p.n]
 
-	codec.base, err = p.parent.NewCodec(&codec.fixlenReadWriter)
+	codec.parent, err = p.parent.NewCodec(&codec.fixlenReadWriter)
 	if err != nil {
 		return
 	}
@@ -109,7 +109,7 @@ func (rw *fixlenReadWriter) Write(p []byte) (int, error) {
 }
 
 type fixlenCodec struct {
-	base    srv.Codec
+	parent  srv.Codec
 	head    [8]byte
 	headBuf []byte
 	bodyBuf []byte
@@ -134,14 +134,14 @@ func (c *fixlenCodec) Receive() (interface{}, error) {
 		return nil, err
 	}
 	c.recvBuf.Reset(buff)
-	msg, err := c.base.Receive()
+	msg, err := c.parent.Receive()
 	return msg, err
 }
 
 func (c *fixlenCodec) Send(msg interface{}) error {
 	c.sendBuf.Reset()
 	c.sendBuf.Write(c.headBuf)
-	err := c.base.Send(msg)
+	err := c.parent.Send(msg)
 	if err != nil {
 		return err
 	}
