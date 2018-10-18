@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"bytes"
 	"encoding/binary"
 	srv "github.com/domac/kenl-proxy/server"
 	"io"
@@ -21,16 +22,17 @@ func (s *SimpleProtocol) NewCodec(conn io.ReadWriter) (srv.Codec, error) {
 }
 
 type SimpleCodec struct {
-	rw io.ReadWriter
+	preBuf bytes.Buffer //加入发生缓存区
+	rw     io.ReadWriter
 }
 
 func (sc *SimpleCodec) Receive() (interface{}, error) {
-	var head [2]byte
+	var head [8]byte
 	_, err := io.ReadFull(sc.rw, head[:])
 	if err != nil {
 		return nil, err
 	}
-	n := binary.BigEndian.Uint16(head[:])
+	n := binary.BigEndian.Uint64(head[:])
 	buf := make([]byte, n)
 	io.ReadFull(sc.rw, buf)
 	if err != nil {
@@ -40,16 +42,22 @@ func (sc *SimpleCodec) Receive() (interface{}, error) {
 }
 
 func (sc *SimpleCodec) Send(msg interface{}) error {
-	var head [2]byte
-	bodylen := len(msg.([]byte))
-	binary.BigEndian.PutUint16(head[:], uint16(bodylen))
 
-	_, err := sc.rw.Write(head[:])
-	if err != nil {
-		return err
-	}
+	var head [8]byte
 
-	_, err = sc.rw.Write(msg.([]byte))
+	//在预处理缓冲区写好东西先
+	sc.preBuf.Reset()
+	sc.preBuf.Write(head[:])
+	sc.preBuf.Write(msg.([]byte))
+
+	buff := sc.preBuf.Bytes()
+
+	//通过大端序覆盖前8位的数据
+	bodylen := uint64(len(buff) - 8)
+	binary.BigEndian.PutUint64(buff, bodylen)
+
+	//数据写入
+	_, err := sc.rw.Write(buff)
 	if err != nil {
 		return err
 	}
