@@ -15,13 +15,13 @@ func Simple() *SimpleProtocol {
 
 func (s *SimpleProtocol) NewCodec(conn io.ReadWriter) (srv.Codec, error) {
 	codec := &SimpleCodec{
-		rw: conn.(io.ReadWriteCloser),
+		rw: conn.(io.ReadWriter),
 	}
 	return codec, nil
 }
 
 type SimpleCodec struct {
-	rw io.ReadWriteCloser
+	rw io.ReadWriter
 }
 
 func (sc *SimpleCodec) Receive() (interface{}, error) {
@@ -57,5 +57,5 @@ func (sc *SimpleCodec) Send(msg interface{}) error {
 }
 
 func (sc *SimpleCodec) Close() error {
-	return sc.rw.Close()
+	return sc.rw.(io.ReadWriteCloser).Close()
 }

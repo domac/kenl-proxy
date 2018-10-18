@@ -12,7 +12,7 @@ import (
 var ErrTooLargePacket = errors.New("Too Large Packet")
 
 type FixLenProtocol struct {
-	base        srv.Protocol
+	parent      srv.Protocol
 	n           int
 	maxRecv     int
 	maxSend     int
@@ -20,10 +20,10 @@ type FixLenProtocol struct {
 	headEncoder func([]byte, int)
 }
 
-func FixLen(base srv.Protocol, n int, byteOrder binary.ByteOrder, maxRecv, maxSend int) *FixLenProtocol {
+func FixLen(parent srv.Protocol, n int, byteOrder binary.ByteOrder, maxRecv, maxSend int) *FixLenProtocol {
 	proto := &FixLenProtocol{
-		n:    n,
-		base: base,
+		n:      n,
+		parent: parent,
 	}
 	switch n {
 	case 1:
@@ -87,7 +87,7 @@ func (p *FixLenProtocol) NewCodec(rw io.ReadWriter) (cc srv.Codec, err error) {
 	}
 	codec.headBuf = codec.head[:p.n]
 
-	codec.base, err = p.base.NewCodec(&codec.fixlenReadWriter)
+	codec.base, err = p.parent.NewCodec(&codec.fixlenReadWriter)
 	if err != nil {
 		return
 	}

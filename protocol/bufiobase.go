@@ -7,16 +7,16 @@ import (
 	srv "github.com/domac/kenl-proxy/server"
 )
 
-func Bufio(base srv.Protocol, readBuf, writeBuf int) srv.Protocol {
+func Bufio(parent srv.Protocol, readBuf, writeBuf int) srv.Protocol {
 	return &bufioProtocol{
-		base:     base,
+		parent:   parent,
 		readBuf:  readBuf,
 		writeBuf: writeBuf,
 	}
 }
 
 type bufioProtocol struct {
-	base     srv.Protocol
+	parent   srv.Protocol
 	readBuf  int
 	writeBuf int
 }
@@ -39,7 +39,7 @@ func (b *bufioProtocol) NewCodec(rw io.ReadWriter) (cc srv.Codec, err error) {
 
 	codec.stream.c, _ = rw.(io.Closer)
 
-	codec.base, err = b.base.NewCodec(&codec.stream)
+	codec.base, err = b.parent.NewCodec(&codec.stream)
 	if err != nil {
 		return
 	}
