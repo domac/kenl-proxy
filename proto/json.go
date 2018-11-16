@@ -1,8 +1,8 @@
-package protocol
+package proto
 
 import (
 	"encoding/json"
-	srv "github.com/domac/kenl-proxy/server"
+	srv "github.com/domac/kenl-proxy"
 	"io"
 	"reflect"
 )

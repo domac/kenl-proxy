@@ -1,9 +1,9 @@
-package protocol
+package proto
 
 import (
 	"bytes"
 	"encoding/binary"
-	srv "github.com/domac/kenl-proxy/server"
+	"github.com/domac/kenl-proxy"
 	"io"
 )
 
@@ -14,7 +14,7 @@ func Simple() *SimpleProtocol {
 	return &SimpleProtocol{}
 }
 
-func (s *SimpleProtocol) NewCodec(conn io.ReadWriter) (srv.Codec, error) {
+func (s *SimpleProtocol) NewCodec(conn io.ReadWriter) (vink.Codec, error) {
 	codec := &SimpleCodec{
 		rw: conn.(io.ReadWriter),
 	}

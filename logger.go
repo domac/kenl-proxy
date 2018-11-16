@@ -1,4 +1,4 @@
-package logger
+package vink
 
 import (
 	"github.com/domac/qloger"

@@ -1,3 +1,11 @@
-# kenl-proxy
+kenl-proxy
+========
 
-tcp protocol gateway for kenl https://github.com/domac/kenl
+实现基于端对端的不同服务间虚连接网络库, 可用于端口映射服务
+
+当前版本：0.1.0
+
+### 服务工作示意图
+
+![vink](doc/vink.png)
+

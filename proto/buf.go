@@ -1,13 +1,13 @@
-package protocol
+package proto
 
 import (
 	"bufio"
 	"io"
 
-	srv "github.com/domac/kenl-proxy/server"
+	"github.com/domac/kenl-proxy"
 )
 
-func Bufio(parent srv.Protocol, readBuf, writeBuf int) srv.Protocol {
+func Bufio(parent vink.Protocol, readBuf, writeBuf int) vink.Protocol {
 	return &bufioProtocol{
 		parent:   parent,
 		readBuf:  readBuf,
@@ -16,12 +16,12 @@ func Bufio(parent srv.Protocol, readBuf, writeBuf int) srv.Protocol {
 }
 
 type bufioProtocol struct {
-	parent   srv.Protocol
+	parent   vink.Protocol
 	readBuf  int
 	writeBuf int
 }
 
-func (b *bufioProtocol) NewCodec(rw io.ReadWriter) (cc srv.Codec, err error) {
+func (b *bufioProtocol) NewCodec(rw io.ReadWriter) (cc vink.Codec, err error) {
 	codec := new(bufioCodec)
 
 	if b.writeBuf > 0 {
@@ -69,7 +69,7 @@ func (s *bufioStream) close() error {
 }
 
 type bufioCodec struct {
-	parent srv.Codec
+	parent vink.Codec
 	stream bufioStream
 }
 
