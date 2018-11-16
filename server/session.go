@@ -66,15 +66,18 @@ func (session *Session) Close() error {
 		if session.sendChan != nil {
 			session.sendMutex.Lock()
 			close(session.sendChan)
-			if clear, ok := session.codec.(ClearSendChan); ok {
-				clear.ClearSendChan(session.sendChan)
-			}
+			// if clear, ok := session.codec.(ClearSendChan); ok {
+			// 	clear.ClearSendChan(session.sendChan)
+			// }
 			session.sendMutex.Unlock()
 		}
 
 		err := session.codec.Close()
 
 		go func() {
+			//触发关闭回调
+			session.invokeCloseCallbacks()
+
 			if session.manager != nil {
 				session.manager.delSession(session)
 			}
@@ -182,14 +185,20 @@ func (session *Session) RemoveCloseCallback(handler, key interface{}) {
 	var prev *closeCallback
 	for callback := session.firstCloseCallback; callback != nil; prev, callback = callback, callback.Next {
 		if callback.Handler == handler && callback.Key == key {
+
+			//如果callback node 是链头
 			if session.firstCloseCallback == callback {
 				session.firstCloseCallback = callback.Next
 			} else {
+				//移除 callback node
 				prev.Next = callback.Next
 			}
+
+			//如果callback node 是链尾
 			if session.lastCloseCallback == callback {
 				session.lastCloseCallback = prev
 			}
+
 			return
 		}
 	}

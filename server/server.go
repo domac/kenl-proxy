@@ -38,9 +38,9 @@ func (f DefaultHandlerFunc) HandleSession(session *Session) {
 	f(session)
 }
 
-type ClearSendChan interface {
-	ClearSendChan(<-chan interface{})
-}
+// type ClearSendChan interface {
+// 	ClearSendChan(<-chan interface{})
+// }
 
 /** 服务器结果 **/
 
